@@ -10,7 +10,7 @@ export interface Equipment {
   id: string
   nombre: string
   descripcion: string
-  categoria: "laboratorio" | "audiovisual" | "tecnologico" | "deportivo"
+  categoria: "audiovisual" | "laboratorio" | "computo" | "herramientas"
   imagen: string
   disponible: boolean
   cantidadTotal: number
@@ -24,17 +24,17 @@ interface EquipmentCardProps {
 }
 
 const categoriaColors: Record<Equipment["categoria"], string> = {
-  laboratorio: "bg-chart-1 text-primary-foreground",
-  audiovisual: "bg-chart-2 text-primary-foreground",
-  tecnologico: "bg-accent text-accent-foreground",
-  deportivo: "bg-chart-3 text-foreground",
+  audiovisual: "bg-blue-600 text-white",
+  laboratorio: "bg-green-600 text-white",
+  computo: "bg-purple-600 text-white",
+  herramientas: "bg-orange-600 text-white",
 }
 
 const categoriaLabels: Record<Equipment["categoria"], string> = {
-  laboratorio: "Laboratorio",
   audiovisual: "Audiovisual",
-  tecnologico: "Tecnologico",
-  deportivo: "Deportivo",
+  laboratorio: "Laboratorio",
+  computo: "Computo",
+  herramientas: "Herramientas",
 }
 
 export function EquipmentCard({ equipment, onReservar }: EquipmentCardProps) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { 
   Calendar, 
@@ -24,7 +24,8 @@ import {
   User,
   Mail,
   Phone,
-  Building
+  Building,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,11 +47,15 @@ import {
 } from "@/components/ui/dialog"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { AuthGuard } from "@/components/auth-guard"
+import { useAuth } from "@/lib/auth-context"
+import { obtenerReservasUsuario, cancelarReserva, type Reserva } from "@/lib/firestore-services"
 
 type ReservationStatus = "pendiente" | "aprobada" | "en_uso" | "completada" | "cancelada" | "rechazada"
 
 interface Reservation {
   id: string
+  firestoreId?: string
   equipmentName: string
   equipmentImage: string
   category: string
@@ -66,92 +71,28 @@ interface Reservation {
   rejectionReason?: string
 }
 
-const mockReservations: Reservation[] = [
-  {
-    id: "RES-2024-001",
-    equipmentName: "Proyector Epson PowerLite",
-    equipmentImage: "/placeholder.svg?height=80&width=80",
-    category: "Audiovisual",
-    quantity: 1,
-    date: "2024-12-20",
-    startTime: "09:00",
-    endTime: "12:00",
-    location: "Aula Magna - Edificio A",
-    status: "aprobada",
-    createdAt: "2024-12-15",
-    approvedBy: "Admin. Juan Perez"
-  },
-  {
-    id: "RES-2024-002",
-    equipmentName: "Microscopio Olympus CX23",
-    equipmentImage: "/placeholder.svg?height=80&width=80",
-    category: "Laboratorio",
-    quantity: 3,
-    date: "2024-12-18",
-    startTime: "14:00",
-    endTime: "17:00",
-    location: "Lab. Biologia - Edificio C",
-    status: "en_uso",
-    createdAt: "2024-12-10",
-    approvedBy: "Admin. Maria Garcia"
-  },
-  {
-    id: "RES-2024-003",
-    equipmentName: "Laptop Dell Latitude 5520",
-    equipmentImage: "/placeholder.svg?height=80&width=80",
-    category: "Computo",
-    quantity: 5,
-    date: "2024-12-22",
-    startTime: "08:00",
-    endTime: "18:00",
-    location: "Sala de Conferencias B",
-    status: "pendiente",
-    createdAt: "2024-12-17",
-    notes: "Para taller de programacion"
-  },
-  {
-    id: "RES-2024-004",
-    equipmentName: "Kit de Arduino Mega",
-    equipmentImage: "/placeholder.svg?height=80&width=80",
-    category: "Laboratorio",
-    quantity: 10,
-    date: "2024-12-10",
-    startTime: "10:00",
-    endTime: "13:00",
-    location: "Lab. Electronica - Edificio D",
-    status: "completada",
-    createdAt: "2024-12-05",
-    approvedBy: "Admin. Carlos Lopez"
-  },
-  {
-    id: "RES-2024-005",
-    equipmentName: "Camara Canon EOS R6",
-    equipmentImage: "/placeholder.svg?height=80&width=80",
-    category: "Audiovisual",
-    quantity: 2,
-    date: "2024-12-08",
-    startTime: "15:00",
-    endTime: "19:00",
-    location: "Auditorio Principal",
-    status: "cancelada",
-    createdAt: "2024-12-01",
-    notes: "Evento cancelado por el organizador"
-  },
-  {
-    id: "RES-2024-006",
-    equipmentName: "Osciloscopio Tektronix",
-    equipmentImage: "/placeholder.svg?height=80&width=80",
-    category: "Laboratorio",
-    quantity: 2,
-    date: "2024-12-25",
-    startTime: "09:00",
-    endTime: "14:00",
-    location: "Lab. Fisica - Edificio B",
-    status: "rechazada",
-    createdAt: "2024-12-16",
-    rejectionReason: "Equipo no disponible en la fecha solicitada"
+function mapReservaToReservation(reserva: Reserva): Reservation {
+  return {
+    id: reserva.codigo,
+    equipmentName: reserva.equipoNombre,
+    equipmentImage: reserva.equipoImagen || "/placeholder.svg",
+    category: reserva.categoria,
+    quantity: reserva.cantidad,
+    date: reserva.fechaReserva instanceof Date 
+      ? reserva.fechaReserva.toISOString().split("T")[0]
+      : new Date(reserva.fechaReserva).toISOString().split("T")[0],
+    startTime: reserva.horaInicio,
+    endTime: reserva.horaFin,
+    location: reserva.ubicacion,
+    status: reserva.estado,
+    createdAt: reserva.createdAt instanceof Date
+      ? reserva.createdAt.toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0],
+    notes: reserva.proposito,
+    rejectionReason: reserva.mensajeRechazo,
+    firestoreId: reserva.id,
   }
-]
+}
 
 const statusConfig: Record<ReservationStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof CheckCircle2; color: string }> = {
   pendiente: { label: "Pendiente", variant: "secondary", icon: Clock3, color: "text-warning" },
@@ -162,14 +103,35 @@ const statusConfig: Record<ReservationStatus, { label: string; variant: "default
   rechazada: { label: "Rechazada", variant: "destructive", icon: AlertCircle, color: "text-destructive" }
 }
 
-export default function MisReservasPage() {
-  const [reservations] = useState<Reservation[]>(mockReservations)
+function MisReservasContent() {
+  const { user } = useAuth()
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("todos")
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [reservationToCancel, setReservationToCancel] = useState<Reservation | null>(null)
+  const [canceling, setCanceling] = useState(false)
+
+  useEffect(() => {
+    async function loadReservations() {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        const reservas = await obtenerReservasUsuario(user.uid)
+        setReservations(reservas.map(mapReservaToReservation))
+      } catch (err) {
+        console.error("Error loading reservations:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadReservations()
+  }, [user])
 
   const filteredReservations = reservations.filter(reservation => {
     const matchesSearch = reservation.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -201,11 +163,39 @@ export default function MisReservasPage() {
     setShowCancelDialog(true)
   }
 
-  const confirmCancel = () => {
-    // Aqui iria la logica para cancelar en Firebase
-    console.log("Cancelando reserva:", reservationToCancel?.id)
-    setShowCancelDialog(false)
-    setReservationToCancel(null)
+  const confirmCancel = async () => {
+    if (!reservationToCancel?.firestoreId) return
+    
+    try {
+      setCanceling(true)
+      await cancelarReserva(reservationToCancel.firestoreId)
+      setReservations(prev => 
+        prev.map(r => 
+          r.id === reservationToCancel.id 
+            ? { ...r, status: "cancelada" as ReservationStatus }
+            : r
+        )
+      )
+      setShowCancelDialog(false)
+      setReservationToCancel(null)
+    } catch (err) {
+      console.error("Error canceling reservation:", err)
+      alert("Error al cancelar la reserva. Intenta de nuevo.")
+    } finally {
+      setCanceling(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   return (
@@ -640,15 +630,30 @@ export default function MisReservasPage() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)} disabled={canceling}>
               No, Mantener
             </Button>
-            <Button variant="destructive" onClick={confirmCancel}>
-              Si, Cancelar Reserva
+            <Button variant="destructive" onClick={confirmCancel} disabled={canceling}>
+              {canceling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelando...
+                </>
+              ) : (
+                "Si, Cancelar Reserva"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function MisReservasPage() {
+  return (
+    <AuthGuard>
+      <MisReservasContent />
+    </AuthGuard>
   )
 }

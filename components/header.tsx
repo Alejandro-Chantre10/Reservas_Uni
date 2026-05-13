@@ -19,7 +19,7 @@ export function Header() {
 
   const isLoggedIn = !!user
   const userName = userData?.nombre || user?.email?.split("@")[0] || "Usuario"
-  const isAdmin = userData?.role === "admin"
+  const isAdmin = userData?.rol === "admin"
 
   const handleSignOut = async () => {
     try {

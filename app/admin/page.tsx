@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { 
   Monitor, 
@@ -24,7 +24,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Menu,
-  Bell
+  Bell,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -61,6 +62,16 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { AuthGuard } from "@/components/auth-guard"
+import { useAuth } from "@/lib/auth-context"
+import { 
+  obtenerEquipos, 
+  crearEquipo, 
+  actualizarEquipo, 
+  eliminarEquipo,
+  subirImagenEquipo,
+  type Equipo 
+} from "@/lib/firestore-services"
 
 interface Equipment {
   id: string
@@ -87,66 +98,37 @@ const statusConfig = {
   agotado: { label: "Agotado", color: "bg-red-100 text-red-700" },
 }
 
-const initialEquipment: Equipment[] = [
-  {
-    id: "1",
-    name: "Proyector Epson PowerLite",
-    description: "Proyector HD 3600 lumenes con HDMI y VGA",
-    category: "audiovisual",
-    quantity: 10,
-    available: 7,
-    location: "Almacen A - Estante 1",
-    image: "/placeholder.svg",
-    status: "disponible",
-  },
-  {
-    id: "2",
-    name: "Microscopio Binocular",
-    description: "Microscopio optico con aumentos 40x-1000x",
-    category: "laboratorio",
-    quantity: 15,
-    available: 12,
-    location: "Lab. Biologia - Gabinete 3",
-    image: "/placeholder.svg",
-    status: "disponible",
-  },
-  {
-    id: "3",
-    name: "Laptop Dell Latitude",
-    description: "Intel i7, 16GB RAM, 512GB SSD",
-    category: "computo",
-    quantity: 20,
-    available: 0,
-    location: "Sala de Computo - Rack 2",
-    image: "/placeholder.svg",
-    status: "agotado",
-  },
-  {
-    id: "4",
-    name: "Kit de Herramientas Electronicas",
-    description: "Multimetro, soldador, pinzas y componentes",
-    category: "herramientas",
-    quantity: 8,
-    available: 5,
-    location: "Taller de Electronica",
-    image: "/placeholder.svg",
-    status: "disponible",
-  },
-  {
-    id: "5",
-    name: "Camara Canon EOS",
-    description: "Camara DSLR con lente 18-55mm",
-    category: "audiovisual",
-    quantity: 5,
-    available: 2,
-    location: "Almacen A - Estante 2",
-    image: "/placeholder.svg",
-    status: "mantenimiento",
-  },
-]
+function mapEquipoToEquipment(equipo: Equipo): Equipment {
+  return {
+    id: equipo.id || "",
+    name: equipo.nombre,
+    description: equipo.descripcion,
+    category: equipo.categoria,
+    quantity: equipo.cantidad,
+    available: equipo.disponibles,
+    location: equipo.ubicacion,
+    image: equipo.imagen || "/placeholder.svg",
+    status: equipo.estado,
+  }
+}
 
-export default function AdminDashboard() {
-  const [equipment, setEquipment] = useState<Equipment[]>(initialEquipment)
+function mapEquipmentToEquipo(equipment: Partial<Equipment>): Omit<Equipo, "id" | "createdAt" | "updatedAt"> {
+  return {
+    nombre: equipment.name || "",
+    descripcion: equipment.description || "",
+    categoria: equipment.category || "audiovisual",
+    cantidad: equipment.quantity || 1,
+    disponibles: equipment.available || 1,
+    ubicacion: equipment.location || "",
+    imagen: equipment.image || "/placeholder.svg",
+    estado: equipment.status || "disponible",
+  }
+}
+
+function AdminDashboardContent() {
+  const { userData, signOut } = useAuth()
+  const [equipment, setEquipment] = useState<Equipment[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -165,6 +147,23 @@ export default function AdminDashboard() {
     image: "/placeholder.svg",
     status: "disponible",
   })
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    async function loadEquipment() {
+      try {
+        setLoading(true)
+        const equipos = await obtenerEquipos()
+        setEquipment(equipos.map(mapEquipoToEquipment))
+      } catch (err) {
+        console.error("Error loading equipment:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadEquipment()
+  }, [])
 
   const filteredEquipment = equipment.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -181,40 +180,58 @@ export default function AdminDashboard() {
     agotado: equipment.filter(e => e.status === "agotado").length,
   }
 
-  const handleCreate = () => {
-    const newEquipment: Equipment = {
-      id: Date.now().toString(),
-      name: formData.name || "",
-      description: formData.description || "",
-      category: formData.category as Equipment["category"],
-      quantity: formData.quantity || 1,
-      available: formData.available || 1,
-      location: formData.location || "",
-      image: formData.image || "/placeholder.svg",
-      status: formData.status as Equipment["status"],
+  const handleCreate = async () => {
+    try {
+      setSubmitting(true)
+      const equipoData = mapEquipmentToEquipo(formData)
+      const newId = await crearEquipo(equipoData)
+      setEquipment([...equipment, { ...formData, id: newId } as Equipment])
+      setIsCreateDialogOpen(false)
+      resetForm()
+    } catch (err) {
+      console.error("Error creating equipment:", err)
+      alert("Error al crear el equipo. Intenta de nuevo.")
+    } finally {
+      setSubmitting(false)
     }
-    setEquipment([...equipment, newEquipment])
-    setIsCreateDialogOpen(false)
-    resetForm()
   }
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!selectedEquipment) return
-    setEquipment(equipment.map(item => 
-      item.id === selectedEquipment.id 
-        ? { ...item, ...formData } as Equipment
-        : item
-    ))
-    setIsEditDialogOpen(false)
-    setSelectedEquipment(null)
-    resetForm()
+    try {
+      setSubmitting(true)
+      const equipoData = mapEquipmentToEquipo(formData)
+      await actualizarEquipo(selectedEquipment.id, equipoData)
+      setEquipment(equipment.map(item => 
+        item.id === selectedEquipment.id 
+          ? { ...item, ...formData } as Equipment
+          : item
+      ))
+      setIsEditDialogOpen(false)
+      setSelectedEquipment(null)
+      resetForm()
+    } catch (err) {
+      console.error("Error updating equipment:", err)
+      alert("Error al actualizar el equipo. Intenta de nuevo.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selectedEquipment) return
-    setEquipment(equipment.filter(item => item.id !== selectedEquipment.id))
-    setIsDeleteDialogOpen(false)
-    setSelectedEquipment(null)
+    try {
+      setSubmitting(true)
+      await eliminarEquipo(selectedEquipment.id)
+      setEquipment(equipment.filter(item => item.id !== selectedEquipment.id))
+      setIsDeleteDialogOpen(false)
+      setSelectedEquipment(null)
+    } catch (err) {
+      console.error("Error deleting equipment:", err)
+      alert("Error al eliminar el equipo. Intenta de nuevo.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const openEditDialog = (item: Equipment) => {
@@ -239,6 +256,14 @@ export default function AdminDashboard() {
       image: "/placeholder.svg",
       status: "disponible",
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -703,15 +728,30 @@ export default function AdminDashboard() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={submitting}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Eliminar
+            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                "Eliminar"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function AdminDashboard() {
+  return (
+    <AuthGuard requireAdmin>
+      <AdminDashboardContent />
+    </AuthGuard>
   )
 }

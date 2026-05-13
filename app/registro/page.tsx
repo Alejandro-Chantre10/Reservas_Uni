@@ -92,7 +92,7 @@ export default function RegistroPage() {
         telefono: formData.telefono,
         tipoUsuario: formData.tipoUsuario as "estudiante" | "docente" | "investigador" | "administrativo",
         facultad: formData.facultad,
-        codigoEstudiante: formData.codigoEstudiante,
+        codigo: formData.codigoEstudiante,
       })
       router.push("/login?registered=true")
     } catch (err: unknown) {

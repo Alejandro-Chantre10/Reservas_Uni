@@ -28,7 +28,7 @@ export interface UserData {
   nombre: string;
   apellido: string;
   telefono?: string;
-  tipoUsuario: "estudiante" | "docente" | "administrativo";
+  tipoUsuario: "estudiante" | "docente" | "investigador" | "administrativo";
   facultad: string;
   codigo: string;
   rol: "usuario" | "admin";

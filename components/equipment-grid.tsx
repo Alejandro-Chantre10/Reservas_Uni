@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { EquipmentCard, type Equipment } from "@/components/equipment-card"
 import { ReservationForm, type ReservationData } from "@/components/reservation-form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, Filter, X } from "lucide-react"
+import { Search, Filter, X, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -15,115 +15,64 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-const mockEquipments: Equipment[] = [
-  {
-    id: "1",
-    nombre: "Microscopio Optico Binocular",
-    descripcion: "Microscopio de alta precision para practicas de biologia y quimica con aumentos de 40x a 1000x.",
-    categoria: "laboratorio",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 10,
-    cantidadDisponible: 7,
-    ubicacion: "Laboratorio A-201",
-  },
-  {
-    id: "2",
-    nombre: "Proyector Epson PowerLite",
-    descripcion: "Proyector Full HD de 4000 lumenes ideal para presentaciones y clases magistrales.",
-    categoria: "audiovisual",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 15,
-    cantidadDisponible: 12,
-    ubicacion: "Almacen Audiovisual B-102",
-  },
-  {
-    id: "3",
-    nombre: "Laptop Dell Latitude 5520",
-    descripcion: "Laptop empresarial con procesador Intel i7, 16GB RAM y SSD 512GB para trabajo academico.",
-    categoria: "tecnologico",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 25,
-    cantidadDisponible: 18,
-    ubicacion: "Centro de Computo C-305",
-  },
-  {
-    id: "4",
-    nombre: "Camara Canon EOS R6",
-    descripcion: "Camara mirrorless profesional de 20MP con grabacion 4K para proyectos audiovisuales.",
-    categoria: "audiovisual",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 5,
-    cantidadDisponible: 3,
-    ubicacion: "Estudio de TV D-101",
-  },
-  {
-    id: "5",
-    nombre: "Osciloscopio Digital",
-    descripcion: "Osciloscopio de 100MHz con 4 canales para practicas de electronica e ingenieria.",
-    categoria: "laboratorio",
-    imagen: "/placeholder.svg",
-    disponible: false,
-    cantidadTotal: 8,
-    cantidadDisponible: 0,
-    ubicacion: "Laboratorio Electronica E-203",
-  },
-  {
-    id: "6",
-    nombre: "Kit de Robotica Arduino",
-    descripcion: "Kit completo con Arduino Mega, sensores, motores y componentes para proyectos de robotica.",
-    categoria: "tecnologico",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 20,
-    cantidadDisponible: 15,
-    ubicacion: "Laboratorio Robotica F-104",
-  },
-  {
-    id: "7",
-    nombre: "Balon de Futbol Profesional",
-    descripcion: "Balon oficial FIFA Quality Pro para entrenamientos y competencias universitarias.",
-    categoria: "deportivo",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 30,
-    cantidadDisponible: 25,
-    ubicacion: "Bodega Deportiva G-001",
-  },
-  {
-    id: "8",
-    nombre: "Centrifuga de Laboratorio",
-    descripcion: "Centrifuga de alta velocidad hasta 15000 RPM para separacion de muestras biologicas.",
-    categoria: "laboratorio",
-    imagen: "/placeholder.svg",
-    disponible: true,
-    cantidadTotal: 4,
-    cantidadDisponible: 2,
-    ubicacion: "Laboratorio Bioquimica A-305",
-  },
-]
+import { obtenerEquipos, crearReserva, type Equipo } from "@/lib/firestore-services"
+import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
 
 type Categoria = Equipment["categoria"]
 
 const categorias: { value: Categoria; label: string }[] = [
-  { value: "laboratorio", label: "Laboratorio" },
   { value: "audiovisual", label: "Audiovisual" },
-  { value: "tecnologico", label: "Tecnologico" },
-  { value: "deportivo", label: "Deportivo" },
+  { value: "laboratorio", label: "Laboratorio" },
+  { value: "computo", label: "Computo" },
+  { value: "herramientas", label: "Herramientas" },
 ]
 
+function mapEquipoToEquipment(equipo: Equipo): Equipment {
+  return {
+    id: equipo.id || "",
+    nombre: equipo.nombre,
+    descripcion: equipo.descripcion,
+    categoria: equipo.categoria,
+    imagen: equipo.imagen || "/placeholder.svg",
+    disponible: equipo.estado === "disponible" && equipo.disponibles > 0,
+    cantidadTotal: equipo.cantidad,
+    cantidadDisponible: equipo.disponibles,
+    ubicacion: equipo.ubicacion,
+  }
+}
+
 export function EquipmentGrid() {
+  const router = useRouter()
+  const { user, userData } = useAuth()
+  const [equipments, setEquipments] = useState<Equipment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState<Categoria[]>([])
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
-  const filteredEquipments = mockEquipments.filter((equipment) => {
+  useEffect(() => {
+    async function loadEquipments() {
+      try {
+        setLoading(true)
+        const equipos = await obtenerEquipos()
+        setEquipments(equipos.map(mapEquipoToEquipment))
+        setError(null)
+      } catch (err) {
+        console.error("Error loading equipments:", err)
+        setError("Error al cargar los equipos. Intenta de nuevo mas tarde.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadEquipments()
+  }, [])
+
+  const filteredEquipments = equipments.filter((equipment) => {
     const matchesSearch =
       equipment.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       equipment.descripcion.toLowerCase().includes(searchQuery.toLowerCase())
@@ -137,14 +86,45 @@ export function EquipmentGrid() {
   })
 
   const handleReservar = (equipment: Equipment) => {
+    if (!user) {
+      router.push("/login")
+      return
+    }
     setSelectedEquipment(equipment)
     setIsFormOpen(true)
   }
 
   const handleSubmitReservation = async (data: ReservationData) => {
-    // Aqui se integraria con Firebase
-    console.log("Reserva enviada:", data)
-    alert(`Reserva confirmada para ${data.equipmentName}`)
+    if (!user || !userData) {
+      throw new Error("Usuario no autenticado")
+    }
+
+    try {
+      await crearReserva({
+        equipoId: data.equipmentId,
+        equipoNombre: data.equipmentName,
+        equipoImagen: selectedEquipment?.imagen || "/placeholder.svg",
+        usuarioId: user.uid,
+        usuarioNombre: `${userData.nombre} ${userData.apellido}`,
+        usuarioEmail: userData.email,
+        cantidad: data.cantidad,
+        fechaReserva: data.fecha,
+        horaInicio: data.horaInicio,
+        horaFin: data.horaFin,
+        proposito: data.proposito,
+        ubicacion: selectedEquipment?.ubicacion || "",
+        categoria: selectedEquipment?.categoria || "",
+      })
+
+      // Refresh equipments to show updated availability
+      const equipos = await obtenerEquipos()
+      setEquipments(equipos.map(mapEquipoToEquipment))
+      
+      alert("Reserva creada exitosamente. Puedes ver el estado en Mis Reservas.")
+    } catch (err) {
+      console.error("Error creating reservation:", err)
+      throw err
+    }
   }
 
   const toggleCategory = (category: Categoria) => {
@@ -162,6 +142,23 @@ export function EquipmentGrid() {
   }
 
   const hasActiveFilters = searchQuery || selectedCategories.length > 0 || showOnlyAvailable
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+        <p className="text-destructive mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()}>Reintentar</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -255,7 +252,10 @@ export function EquipmentGrid() {
           <Search className="mb-4 h-12 w-12 text-muted-foreground/50" />
           <h3 className="text-lg font-medium">No se encontraron equipos</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Intenta ajustar los filtros o la busqueda
+            {equipments.length === 0 
+              ? "No hay equipos registrados en el sistema aun."
+              : "Intenta ajustar los filtros o la busqueda"
+            }
           </p>
           {hasActiveFilters && (
             <Button variant="outline" size="sm" onClick={clearFilters} className="mt-4">
