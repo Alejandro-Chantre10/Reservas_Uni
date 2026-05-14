@@ -11,11 +11,11 @@ export function Footer() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <GraduationCap className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">UniReservas</span>
+              <span className="text-xl font-bold">LabReservas</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Sistema universitario para la gestion y reserva de equipos academicos, 
-              de laboratorio y deportivos.
+              Sistema universitario para la gestion y reserva de laboratorios academicos
+              para practicas, proyectos e investigacion.
             </p>
           </div>
 
@@ -23,8 +23,8 @@ export function Footer() {
             <h3 className="font-semibold">Enlaces Rapidos</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Catalogo de Equipos
+                <Link href="/#catalogo" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Catalogo de Laboratorios
                 </Link>
               </li>
               <li>
@@ -46,19 +46,22 @@ export function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold">Categorias</h3>
+            <h3 className="font-semibold">Tipos de Laboratorios</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <span className="text-muted-foreground">Equipos de Laboratorio</span>
+                <span className="text-muted-foreground">Laboratorios de Computacion</span>
               </li>
               <li>
-                <span className="text-muted-foreground">Equipos Audiovisuales</span>
+                <span className="text-muted-foreground">Laboratorios de Quimica</span>
               </li>
               <li>
-                <span className="text-muted-foreground">Equipos Tecnologicos</span>
+                <span className="text-muted-foreground">Laboratorios de Fisica</span>
               </li>
               <li>
-                <span className="text-muted-foreground">Equipos Deportivos</span>
+                <span className="text-muted-foreground">Laboratorios de Biologia</span>
+              </li>
+              <li>
+                <span className="text-muted-foreground">Laboratorios de Electronica</span>
               </li>
             </ul>
           </div>
@@ -68,7 +71,7 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="h-4 w-4" />
-                <span>reservas@universidad.edu</span>
+                <span>laboratorios@universidad.edu</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
@@ -84,7 +87,7 @@ export function Footer() {
 
         <div className="mt-12 border-t pt-6">
           <div className="flex flex-col items-center justify-between gap-4 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
-            <p>&copy; {new Date().getFullYear()} UniReservas. Todos los derechos reservados.</p>
+            <p>&copy; {new Date().getFullYear()} LabReservas. Todos los derechos reservados.</p>
             <div className="flex gap-4">
               <Link href="#" className="hover:text-foreground transition-colors">
                 Terminos de Uso

@@ -1,34 +1,34 @@
 import { Card, CardContent } from "@/components/ui/card"
-import { Microscope, Camera, Laptop, Trophy } from "lucide-react"
+import { Monitor, FlaskConical, Atom, Cpu } from "lucide-react"
 
 const stats = [
   {
-    label: "Equipos de Laboratorio",
-    value: "45+",
-    icon: Microscope,
-    color: "text-chart-1",
-    bgColor: "bg-chart-1/10",
+    label: "Labs de Computacion",
+    value: "8+",
+    icon: Monitor,
+    color: "text-blue-600",
+    bgColor: "bg-blue-100",
   },
   {
-    label: "Equipos Audiovisuales",
-    value: "30+",
-    icon: Camera,
-    color: "text-chart-2",
-    bgColor: "bg-chart-2/10",
+    label: "Labs de Quimica",
+    value: "6+",
+    icon: FlaskConical,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-100",
   },
   {
-    label: "Equipos Tecnologicos",
-    value: "50+",
-    icon: Laptop,
-    color: "text-accent",
-    bgColor: "bg-accent/10",
+    label: "Labs de Fisica",
+    value: "5+",
+    icon: Atom,
+    color: "text-amber-600",
+    bgColor: "bg-amber-100",
   },
   {
-    label: "Equipos Deportivos",
-    value: "100+",
-    icon: Trophy,
-    color: "text-chart-3",
-    bgColor: "bg-chart-3/10",
+    label: "Labs de Electronica",
+    value: "4+",
+    icon: Cpu,
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
   },
 ]
 

@@ -38,7 +38,7 @@ export function Header() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <GraduationCap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">UniReservas</span>
+            <span className="text-xl font-bold text-foreground">LabReservas</span>
           </Link>
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
@@ -53,15 +53,15 @@ export function Header() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold text-foreground">UniReservas</span>
+          <span className="text-xl font-bold text-foreground">LabReservas</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
           <Link
-            href="/"
+            href="/#catalogo"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            Catalogo
+            Laboratorios
           </Link>
           {isLoggedIn && (
             <Link
@@ -135,7 +135,7 @@ export function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href="/">Catalogo</Link>
+                <Link href="/#catalogo">Laboratorios</Link>
               </DropdownMenuItem>
               {isLoggedIn && (
                 <DropdownMenuItem asChild>

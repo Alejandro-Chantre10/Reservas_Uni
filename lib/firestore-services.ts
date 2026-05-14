@@ -17,72 +17,106 @@ import { db, storage } from "./firebase-config";
 
 // ==================== TIPOS ====================
 
-export interface Equipo {
+export type TipoLaboratorio = 
+  | "computacion"
+  | "quimica"
+  | "fisica"
+  | "biologia"
+  | "electronica"
+  | "robotica"
+  | "idiomas"
+  | "multimedia";
+
+export type Amenidad =
+  | "proyector"
+  | "aire_acondicionado"
+  | "wifi"
+  | "computadoras"
+  | "pizarra_digital"
+  | "equipo_especializado"
+  | "ventilacion"
+  | "microscopios"
+  | "impresora_3d";
+
+export interface HorarioDisponible {
+  dia: "lunes" | "martes" | "miercoles" | "jueves" | "viernes" | "sabado";
+  horaInicio: string;
+  horaFin: string;
+}
+
+export interface Laboratorio {
   id?: string;
   nombre: string;
   descripcion: string;
-  categoria: "audiovisual" | "laboratorio" | "computo" | "herramientas";
-  cantidad: number;
-  disponibles: number;
-  estado: "disponible" | "mantenimiento" | "agotado";
-  ubicacion: string;
+  tipo: TipoLaboratorio;
+  capacidad: number;
+  edificio: string;
+  piso: string;
+  numeroSala: string;
   imagen: string;
+  amenidades: Amenidad[];
+  horariosDisponibles: HorarioDisponible[];
+  estado: "disponible" | "mantenimiento" | "ocupado";
+  responsable: string;
+  contacto: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export interface Reserva {
+export interface ReservaLaboratorio {
   id?: string;
-  equipoId: string;
-  equipoNombre: string;
-  equipoImagen: string;
+  laboratorioId: string;
+  laboratorioNombre: string;
+  laboratorioImagen: string;
+  ubicacion: string;
   usuarioId: string;
   usuarioNombre: string;
   usuarioEmail: string;
-  cantidad: number;
   fechaReserva: Date;
   horaInicio: string;
   horaFin: string;
   proposito: string;
+  numeroParticipantes: number;
   estado: "pendiente" | "aprobada" | "rechazada" | "en_uso" | "completada" | "cancelada";
   mensajeRechazo?: string;
   codigo: string;
-  ubicacion: string;
-  categoria: string;
+  tipoLaboratorio: TipoLaboratorio;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-// ==================== EQUIPOS ====================
+// ==================== LABORATORIOS ====================
 
-const equiposCollection = collection(db, "equipos");
+const laboratoriosCollection = collection(db, "laboratorios");
 
-// Crear equipo
-export async function crearEquipo(equipo: Omit<Equipo, "id" | "createdAt" | "updatedAt">): Promise<string> {
-  const docRef = await addDoc(equiposCollection, {
-    ...equipo,
+// Crear laboratorio
+export async function crearLaboratorio(
+  laboratorio: Omit<Laboratorio, "id" | "createdAt" | "updatedAt">
+): Promise<string> {
+  const docRef = await addDoc(laboratoriosCollection, {
+    ...laboratorio,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   return docRef.id;
 }
 
-// Obtener todos los equipos
-export async function obtenerEquipos(): Promise<Equipo[]> {
+// Obtener todos los laboratorios
+export async function obtenerLaboratorios(): Promise<Laboratorio[]> {
   const querySnapshot = await getDocs(
-    query(equiposCollection, orderBy("createdAt", "desc"))
+    query(laboratoriosCollection, orderBy("createdAt", "desc"))
   );
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
     createdAt: doc.data().createdAt?.toDate(),
     updatedAt: doc.data().updatedAt?.toDate(),
-  })) as Equipo[];
+  })) as Laboratorio[];
 }
 
-// Obtener equipo por ID
-export async function obtenerEquipoPorId(id: string): Promise<Equipo | null> {
-  const docRef = doc(db, "equipos", id);
+// Obtener laboratorio por ID
+export async function obtenerLaboratorioPorId(id: string): Promise<Laboratorio | null> {
+  const docRef = doc(db, "laboratorios", id);
   const docSnap = await getDoc(docRef);
 
   if (docSnap.exists()) {
@@ -91,40 +125,52 @@ export async function obtenerEquipoPorId(id: string): Promise<Equipo | null> {
       ...docSnap.data(),
       createdAt: docSnap.data().createdAt?.toDate(),
       updatedAt: docSnap.data().updatedAt?.toDate(),
-    } as Equipo;
+    } as Laboratorio;
   }
   return null;
 }
 
-// Obtener equipos por categoria
-export async function obtenerEquiposPorCategoria(
-  categoria: Equipo["categoria"]
-): Promise<Equipo[]> {
-  const q = query(equiposCollection, where("categoria", "==", categoria));
+// Obtener laboratorios por tipo
+export async function obtenerLaboratoriosPorTipo(
+  tipo: TipoLaboratorio
+): Promise<Laboratorio[]> {
+  const q = query(laboratoriosCollection, where("tipo", "==", tipo));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
     createdAt: doc.data().createdAt?.toDate(),
     updatedAt: doc.data().updatedAt?.toDate(),
-  })) as Equipo[];
+  })) as Laboratorio[];
 }
 
-// Actualizar equipo
-export async function actualizarEquipo(
+// Obtener laboratorios disponibles
+export async function obtenerLaboratoriosDisponibles(): Promise<Laboratorio[]> {
+  const q = query(laboratoriosCollection, where("estado", "==", "disponible"));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate(),
+    updatedAt: doc.data().updatedAt?.toDate(),
+  })) as Laboratorio[];
+}
+
+// Actualizar laboratorio
+export async function actualizarLaboratorio(
   id: string,
-  datos: Partial<Omit<Equipo, "id" | "createdAt">>
+  datos: Partial<Omit<Laboratorio, "id" | "createdAt">>
 ): Promise<void> {
-  const docRef = doc(db, "equipos", id);
+  const docRef = doc(db, "laboratorios", id);
   await updateDoc(docRef, {
     ...datos,
     updatedAt: serverTimestamp(),
   });
 }
 
-// Eliminar equipo
-export async function eliminarEquipo(id: string): Promise<void> {
-  const docRef = doc(db, "equipos", id);
+// Eliminar laboratorio
+export async function eliminarLaboratorio(id: string): Promise<void> {
+  const docRef = doc(db, "laboratorios", id);
   await deleteDoc(docRef);
 }
 
@@ -138,12 +184,12 @@ function generarCodigoReserva(): string {
   const year = fecha.getFullYear().toString().slice(-2);
   const month = (fecha.getMonth() + 1).toString().padStart(2, "0");
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `RES-${year}${month}-${random}`;
+  return `LAB-${year}${month}-${random}`;
 }
 
-// Crear reserva
-export async function crearReserva(
-  reserva: Omit<Reserva, "id" | "codigo" | "estado" | "createdAt" | "updatedAt">
+// Crear reserva de laboratorio
+export async function crearReservaLaboratorio(
+  reserva: Omit<ReservaLaboratorio, "id" | "codigo" | "estado" | "createdAt" | "updatedAt">
 ): Promise<string> {
   const codigo = generarCodigoReserva();
 
@@ -156,22 +202,83 @@ export async function crearReserva(
     updatedAt: serverTimestamp(),
   });
 
-  // Actualizar disponibilidad del equipo
-  const equipoRef = doc(db, "equipos", reserva.equipoId);
-  const equipoSnap = await getDoc(equipoRef);
-  if (equipoSnap.exists()) {
-    const equipoData = equipoSnap.data();
-    await updateDoc(equipoRef, {
-      disponibles: Math.max(0, equipoData.disponibles - reserva.cantidad),
-      updatedAt: serverTimestamp(),
-    });
-  }
-
   return docRef.id;
 }
 
+// Verificar disponibilidad de laboratorio
+export async function verificarDisponibilidad(
+  laboratorioId: string,
+  fecha: Date,
+  horaInicio: string,
+  horaFin: string
+): Promise<boolean> {
+  const fechaInicio = new Date(fecha);
+  fechaInicio.setHours(0, 0, 0, 0);
+  const fechaFin = new Date(fecha);
+  fechaFin.setHours(23, 59, 59, 999);
+
+  const q = query(
+    reservasCollection,
+    where("laboratorioId", "==", laboratorioId),
+    where("fechaReserva", ">=", Timestamp.fromDate(fechaInicio)),
+    where("fechaReserva", "<=", Timestamp.fromDate(fechaFin)),
+    where("estado", "in", ["pendiente", "aprobada", "en_uso"])
+  );
+
+  const querySnapshot = await getDocs(q);
+  
+  // Verificar si hay conflicto de horarios
+  for (const doc of querySnapshot.docs) {
+    const reserva = doc.data();
+    const reservaInicio = reserva.horaInicio;
+    const reservaFin = reserva.horaFin;
+
+    // Verificar si hay superposicion de horarios
+    if (
+      (horaInicio >= reservaInicio && horaInicio < reservaFin) ||
+      (horaFin > reservaInicio && horaFin <= reservaFin) ||
+      (horaInicio <= reservaInicio && horaFin >= reservaFin)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Obtener reservas de un laboratorio para una fecha
+export async function obtenerReservasLaboratorioPorFecha(
+  laboratorioId: string,
+  fecha: Date
+): Promise<ReservaLaboratorio[]> {
+  const fechaInicio = new Date(fecha);
+  fechaInicio.setHours(0, 0, 0, 0);
+  const fechaFin = new Date(fecha);
+  fechaFin.setHours(23, 59, 59, 999);
+
+  const q = query(
+    reservasCollection,
+    where("laboratorioId", "==", laboratorioId),
+    where("fechaReserva", ">=", Timestamp.fromDate(fechaInicio)),
+    where("fechaReserva", "<=", Timestamp.fromDate(fechaFin)),
+    where("estado", "in", ["pendiente", "aprobada", "en_uso"])
+  );
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      fechaReserva: data.fechaReserva?.toDate(),
+      createdAt: data.createdAt?.toDate(),
+      updatedAt: data.updatedAt?.toDate(),
+    };
+  }) as ReservaLaboratorio[];
+}
+
 // Obtener todas las reservas (admin)
-export async function obtenerTodasLasReservas(): Promise<Reserva[]> {
+export async function obtenerTodasLasReservas(): Promise<ReservaLaboratorio[]> {
   const querySnapshot = await getDocs(
     query(reservasCollection, orderBy("createdAt", "desc"))
   );
@@ -184,11 +291,11 @@ export async function obtenerTodasLasReservas(): Promise<Reserva[]> {
       createdAt: data.createdAt?.toDate(),
       updatedAt: data.updatedAt?.toDate(),
     };
-  }) as Reserva[];
+  }) as ReservaLaboratorio[];
 }
 
 // Obtener reservas de un usuario
-export async function obtenerReservasUsuario(usuarioId: string): Promise<Reserva[]> {
+export async function obtenerReservasUsuario(usuarioId: string): Promise<ReservaLaboratorio[]> {
   const q = query(
     reservasCollection,
     where("usuarioId", "==", usuarioId),
@@ -204,13 +311,13 @@ export async function obtenerReservasUsuario(usuarioId: string): Promise<Reserva
       createdAt: data.createdAt?.toDate(),
       updatedAt: data.updatedAt?.toDate(),
     };
-  }) as Reserva[];
+  }) as ReservaLaboratorio[];
 }
 
 // Actualizar estado de reserva
 export async function actualizarEstadoReserva(
   id: string,
-  estado: Reserva["estado"],
+  estado: ReservaLaboratorio["estado"],
   mensajeRechazo?: string
 ): Promise<void> {
   const docRef = doc(db, "reservas", id);
@@ -224,23 +331,6 @@ export async function actualizarEstadoReserva(
   }
 
   await updateDoc(docRef, updateData);
-
-  // Si se cancela o rechaza, devolver disponibilidad
-  if (estado === "cancelada" || estado === "rechazada") {
-    const reservaSnap = await getDoc(docRef);
-    if (reservaSnap.exists()) {
-      const reservaData = reservaSnap.data();
-      const equipoRef = doc(db, "equipos", reservaData.equipoId);
-      const equipoSnap = await getDoc(equipoRef);
-      if (equipoSnap.exists()) {
-        const equipoData = equipoSnap.data();
-        await updateDoc(equipoRef, {
-          disponibles: equipoData.disponibles + reservaData.cantidad,
-          updatedAt: serverTimestamp(),
-        });
-      }
-    }
-  }
 }
 
 // Cancelar reserva
@@ -250,13 +340,13 @@ export async function cancelarReserva(id: string): Promise<void> {
 
 // ==================== STORAGE ====================
 
-// Subir imagen de equipo
-export async function subirImagenEquipo(
+// Subir imagen de laboratorio
+export async function subirImagenLaboratorio(
   archivo: File,
-  equipoId: string
+  laboratorioId: string
 ): Promise<string> {
   const extension = archivo.name.split(".").pop();
-  const nombreArchivo = `equipos/${equipoId}_${Date.now()}.${extension}`;
+  const nombreArchivo = `laboratorios/${laboratorioId}_${Date.now()}.${extension}`;
   const storageRef = ref(storage, nombreArchivo);
 
   await uploadBytes(storageRef, archivo);
@@ -266,26 +356,38 @@ export async function subirImagenEquipo(
 
 // ==================== ESTADISTICAS ====================
 
-export async function obtenerEstadisticasEquipos(): Promise<{
+export async function obtenerEstadisticasLaboratorios(): Promise<{
   total: number;
   disponibles: number;
   mantenimiento: number;
-  agotados: number;
-  porCategoria: Record<string, number>;
+  ocupados: number;
+  porTipo: Record<string, number>;
 }> {
-  const equipos = await obtenerEquipos();
+  const laboratorios = await obtenerLaboratorios();
+
+  const porTipo: Record<string, number> = {
+    computacion: 0,
+    quimica: 0,
+    fisica: 0,
+    biologia: 0,
+    electronica: 0,
+    robotica: 0,
+    idiomas: 0,
+    multimedia: 0,
+  };
+
+  laboratorios.forEach((lab) => {
+    if (porTipo[lab.tipo] !== undefined) {
+      porTipo[lab.tipo]++;
+    }
+  });
 
   return {
-    total: equipos.length,
-    disponibles: equipos.filter((e) => e.estado === "disponible").length,
-    mantenimiento: equipos.filter((e) => e.estado === "mantenimiento").length,
-    agotados: equipos.filter((e) => e.estado === "agotado").length,
-    porCategoria: {
-      audiovisual: equipos.filter((e) => e.categoria === "audiovisual").length,
-      laboratorio: equipos.filter((e) => e.categoria === "laboratorio").length,
-      computo: equipos.filter((e) => e.categoria === "computo").length,
-      herramientas: equipos.filter((e) => e.categoria === "herramientas").length,
-    },
+    total: laboratorios.length,
+    disponibles: laboratorios.filter((l) => l.estado === "disponible").length,
+    mantenimiento: laboratorios.filter((l) => l.estado === "mantenimiento").length,
+    ocupados: laboratorios.filter((l) => l.estado === "ocupado").length,
+    porTipo,
   };
 }
 
@@ -312,3 +414,179 @@ export async function obtenerEstadisticasReservas(usuarioId?: string): Promise<{
     rechazadas: reservas.filter((r) => r.estado === "rechazada").length,
   };
 }
+
+// ==================== DATOS INICIALES ====================
+
+export const laboratoriosIniciales: Omit<Laboratorio, "id" | "createdAt" | "updatedAt">[] = [
+  {
+    nombre: "Laboratorio de Computacion A",
+    descripcion: "Laboratorio equipado con 30 computadoras de ultima generacion para practicas de programacion y desarrollo de software.",
+    tipo: "computacion",
+    capacidad: 30,
+    edificio: "Edificio de Ingenieria",
+    piso: "2",
+    numeroSala: "A-201",
+    imagen: "/placeholder.svg",
+    amenidades: ["proyector", "aire_acondicionado", "wifi", "computadoras", "pizarra_digital"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "martes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "miercoles", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "jueves", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "viernes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "sabado", horaInicio: "08:00", horaFin: "14:00" },
+    ],
+    estado: "disponible",
+    responsable: "Ing. Carlos Rodriguez",
+    contacto: "carlos.rodriguez@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio de Quimica General",
+    descripcion: "Laboratorio para practicas de quimica general con mesas de trabajo, campanas de extraccion y equipos de seguridad.",
+    tipo: "quimica",
+    capacidad: 24,
+    edificio: "Edificio de Ciencias",
+    piso: "1",
+    numeroSala: "B-105",
+    imagen: "/placeholder.svg",
+    amenidades: ["ventilacion", "equipo_especializado", "wifi"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "08:00", horaFin: "18:00" },
+      { dia: "martes", horaInicio: "08:00", horaFin: "18:00" },
+      { dia: "miercoles", horaInicio: "08:00", horaFin: "18:00" },
+      { dia: "jueves", horaInicio: "08:00", horaFin: "18:00" },
+      { dia: "viernes", horaInicio: "08:00", horaFin: "18:00" },
+    ],
+    estado: "disponible",
+    responsable: "Dra. Maria Lopez",
+    contacto: "maria.lopez@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio de Fisica Experimental",
+    descripcion: "Laboratorio equipado para experimentos de mecanica, termodinamica, optica y electromagnetismo.",
+    tipo: "fisica",
+    capacidad: 20,
+    edificio: "Edificio de Ciencias",
+    piso: "2",
+    numeroSala: "B-203",
+    imagen: "/placeholder.svg",
+    amenidades: ["proyector", "equipo_especializado", "wifi", "aire_acondicionado"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "07:00", horaFin: "20:00" },
+      { dia: "martes", horaInicio: "07:00", horaFin: "20:00" },
+      { dia: "miercoles", horaInicio: "07:00", horaFin: "20:00" },
+      { dia: "jueves", horaInicio: "07:00", horaFin: "20:00" },
+      { dia: "viernes", horaInicio: "07:00", horaFin: "20:00" },
+    ],
+    estado: "disponible",
+    responsable: "Dr. Pedro Sanchez",
+    contacto: "pedro.sanchez@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio de Biologia Molecular",
+    descripcion: "Laboratorio con microscopios de alta resolucion, centrifugas y equipos para analisis de ADN y cultivos celulares.",
+    tipo: "biologia",
+    capacidad: 16,
+    edificio: "Edificio de Ciencias de la Vida",
+    piso: "3",
+    numeroSala: "C-301",
+    imagen: "/placeholder.svg",
+    amenidades: ["microscopios", "equipo_especializado", "aire_acondicionado", "wifi"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "08:00", horaFin: "17:00" },
+      { dia: "martes", horaInicio: "08:00", horaFin: "17:00" },
+      { dia: "miercoles", horaInicio: "08:00", horaFin: "17:00" },
+      { dia: "jueves", horaInicio: "08:00", horaFin: "17:00" },
+      { dia: "viernes", horaInicio: "08:00", horaFin: "17:00" },
+    ],
+    estado: "disponible",
+    responsable: "Dra. Ana Martinez",
+    contacto: "ana.martinez@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio de Electronica",
+    descripcion: "Laboratorio con osciloscopios, generadores de funciones, fuentes de poder y componentes electronicos para practicas.",
+    tipo: "electronica",
+    capacidad: 25,
+    edificio: "Edificio de Ingenieria",
+    piso: "3",
+    numeroSala: "A-302",
+    imagen: "/placeholder.svg",
+    amenidades: ["equipo_especializado", "aire_acondicionado", "wifi", "proyector"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "martes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "miercoles", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "jueves", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "viernes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "sabado", horaInicio: "08:00", horaFin: "14:00" },
+    ],
+    estado: "disponible",
+    responsable: "Ing. Roberto Gomez",
+    contacto: "roberto.gomez@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio de Robotica e IA",
+    descripcion: "Laboratorio con kits de robotica, impresoras 3D, brazos roboticos y estaciones de trabajo para inteligencia artificial.",
+    tipo: "robotica",
+    capacidad: 20,
+    edificio: "Edificio de Ingenieria",
+    piso: "4",
+    numeroSala: "A-401",
+    imagen: "/placeholder.svg",
+    amenidades: ["impresora_3d", "computadoras", "wifi", "aire_acondicionado", "proyector"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "08:00", horaFin: "20:00" },
+      { dia: "martes", horaInicio: "08:00", horaFin: "20:00" },
+      { dia: "miercoles", horaInicio: "08:00", horaFin: "20:00" },
+      { dia: "jueves", horaInicio: "08:00", horaFin: "20:00" },
+      { dia: "viernes", horaInicio: "08:00", horaFin: "20:00" },
+    ],
+    estado: "mantenimiento",
+    responsable: "Ing. Laura Fernandez",
+    contacto: "laura.fernandez@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio de Idiomas",
+    descripcion: "Laboratorio multimedia con cabinas individuales, audio profesional y software para aprendizaje de idiomas.",
+    tipo: "idiomas",
+    capacidad: 35,
+    edificio: "Edificio de Humanidades",
+    piso: "1",
+    numeroSala: "D-102",
+    imagen: "/placeholder.svg",
+    amenidades: ["computadoras", "aire_acondicionado", "wifi"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "martes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "miercoles", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "jueves", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "viernes", horaInicio: "07:00", horaFin: "21:00" },
+      { dia: "sabado", horaInicio: "08:00", horaFin: "13:00" },
+    ],
+    estado: "disponible",
+    responsable: "Lic. Carmen Ruiz",
+    contacto: "carmen.ruiz@universidad.edu",
+  },
+  {
+    nombre: "Laboratorio Multimedia",
+    descripcion: "Estudio de produccion audiovisual con camaras profesionales, iluminacion, pantalla verde y edicion de video.",
+    tipo: "multimedia",
+    capacidad: 15,
+    edificio: "Edificio de Comunicaciones",
+    piso: "2",
+    numeroSala: "E-201",
+    imagen: "/placeholder.svg",
+    amenidades: ["equipo_especializado", "computadoras", "aire_acondicionado", "wifi"],
+    horariosDisponibles: [
+      { dia: "lunes", horaInicio: "09:00", horaFin: "19:00" },
+      { dia: "martes", horaInicio: "09:00", horaFin: "19:00" },
+      { dia: "miercoles", horaInicio: "09:00", horaFin: "19:00" },
+      { dia: "jueves", horaInicio: "09:00", horaFin: "19:00" },
+      { dia: "viernes", horaInicio: "09:00", horaFin: "19:00" },
+    ],
+    estado: "disponible",
+    responsable: "Lic. Miguel Torres",
+    contacto: "miguel.torres@universidad.edu",
+  },
+];

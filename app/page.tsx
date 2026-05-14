@@ -1,7 +1,7 @@
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { StatsSection } from "@/components/stats-section"
-import { EquipmentGrid } from "@/components/equipment-grid"
+import { LaboratoryGrid } from "@/components/laboratory-grid"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CalendarCheck, Clock, Shield } from "lucide-react"
 import Link from "next/link"
@@ -18,16 +18,16 @@ export default function HomePage() {
             <div className="mx-auto max-w-3xl text-center">
               <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                 Sistema de Reservas de{" "}
-                <span className="text-primary">Equipos Universitarios</span>
+                <span className="text-primary">Laboratorios Universitarios</span>
               </h1>
               <p className="mt-6 text-pretty text-lg text-muted-foreground sm:text-xl">
-                Reserva facilmente equipos de laboratorio, audiovisuales, tecnologicos y deportivos 
-                para tus actividades academicas. Disponible las 24 horas, los 7 dias de la semana.
+                Reserva facilmente laboratorios de computacion, quimica, fisica, biologia y mas
+                para tus practicas y proyectos academicos. Disponible las 24 horas, los 7 dias de la semana.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button size="lg" asChild>
                   <Link href="#catalogo">
-                    Ver Catalogo
+                    Ver Laboratorios
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -45,7 +45,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="mt-4 font-semibold">Reserva Facil</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Proceso simple y rapido para reservar cualquier equipo disponible
+                  Proceso simple y rapido para reservar cualquier laboratorio disponible
                 </p>
               </div>
               <div className="flex flex-col items-center rounded-lg bg-card p-6 text-center shadow-sm">
@@ -81,12 +81,12 @@ export default function HomePage() {
         <section id="catalogo" className="py-16">
           <div className="container mx-auto px-4">
             <div className="mb-10 text-center">
-              <h2 className="text-3xl font-bold">Catalogo de Equipos</h2>
+              <h2 className="text-3xl font-bold">Catalogo de Laboratorios</h2>
               <p className="mt-2 text-muted-foreground">
-                Explora nuestra amplia seleccion de equipos disponibles para reserva
+                Explora nuestra amplia seleccion de laboratorios disponibles para reserva
               </p>
             </div>
-            <EquipmentGrid />
+            <LaboratoryGrid />
           </div>
         </section>
 
@@ -95,7 +95,7 @@ export default function HomePage() {
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold">Comienza a Reservar Hoy</h2>
             <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
-              Registrate con tu correo institucional y accede a todos los equipos 
+              Registrate con tu correo institucional y accede a todos los laboratorios 
               disponibles para tu carrera y facultad.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
